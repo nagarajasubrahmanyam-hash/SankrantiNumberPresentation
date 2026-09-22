@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saṅkrānti Day Number: presentation</title>
+
+<!-- The only calculation library: Astronomy Engine -->
+<script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Literata:opsz,wght@7..72,400;7..72,600&display=swap" rel="stylesheet">
+
+<style>
+  /* 1u = 1% of the smaller of screen width or (16:9) height, so everything scales with the projector */
+  :root {
+    --u: min(1vw, 1.7778vh);
+    --serif: "Literata", Georgia, "Times New Roman", serif;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (max-width: 700px) { :root { --u: 2.2vw; } }
+
+  [data-theme="dark"] {
+    --bg: #08141e; --surface: #0f2130; --ink: #eef4f8; --muted: #a3b6c6; --rule: #284258;
+    --fire: #ffb020; --fire-text: #ffc75a; --fire-wash: rgba(255,176,32,.15); --on-fire: #1b1300;
+    --seg-a: #12304b; --seg-b: rgba(255,176,32,.30); --seg-c: #1c2c58;
+    --focus: #7dbaff; --danger: #ff9a90;
+  }
+  [data-theme="light"] {
+    --bg: #f4f7f9; --surface: #ffffff; --ink: #0d2233; --muted: #52667a; --rule: #cfd9e2;
+    --fire: #e08600; --fire-text: #9a4d00; --fire-wash: #fff0d4; --on-fire: #ffffff;
+    --seg-a: #dbe6f0; --seg-b: #ffe2a8; --seg-c: #cdd6ec;
+    --focus: #1a6fd4; --danger: #b3261e;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 400 calc(var(--u) * 2) / 1.45 var(--sans);
+    overflow: hidden;
+  }
+  button, input { font: inherit; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  .deck { position: fixed; inset: 0; }
+  .slide {
+    position: absolute; inset: 0; display: none; flex-direction: column; justify-content: center;
+    gap: calc(var(--u) * 3.2);
+    padding: calc(var(--u) * 4) calc(var(--u) * 7) calc(var(--u) * 9);
+    overflow: hidden;
+  }
+  .slide.active { display: flex; animation: fadein .25s ease-out; }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .slide.active { animation: none; } }
+
+  h1, h2, h3 { font-family: var(--serif); margin: 0; letter-spacing: -0.015em; }
+  h2.title { text-wrap: balance; font-weight: 600; font-size: calc(var(--u) * 4.6); line-height: 1.1; max-width: 22em; }
+  .lead { font-size: calc(var(--u) * 2.2); color: var(--muted); margin: 0; max-width: 40em; }
+  .fire { color: var(--fire-text); }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* ---------- 0. setup ---------- */
+  #s0 { overflow: auto; justify-content: flex-start; padding-top: calc(var(--u) * 5); }
+  #s0 h1 { font-size: calc(var(--u) * 6); font-weight: 600; line-height: 1.05; }
+  .setup {
+    background: var(--surface); border: 1px solid var(--rule); border-radius: calc(var(--u) * 1.2);
+    padding: calc(var(--u) * 2.4); max-width: calc(var(--u) * 82); width: 100%;
+    font-size: max(15px, calc(var(--u) * 1.6));
+  }
+  .setup form { display: grid; gap: calc(var(--u) * 1.6); }
+  .row { display: grid; gap: calc(var(--u) * 1.4); grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(var(--u) * 22)), 1fr)); }
+  .field { display: grid; gap: 5px; align-content: start; min-width: 0; }
+  .field label { font-size: .85em; font-weight: 500; color: var(--muted); }
+  .setup input {
+    color: var(--ink); background: var(--bg); border: 1px solid var(--rule); border-radius: 8px;
+    padding: .55em .7em; width: 100%; min-height: 2.6em;
+  }
+  .hint { font-size: .8em; color: var(--muted); min-height: 1.2em; }
+  .hint.warn { color: var(--fire-text); }
+  .combo { position: relative; }
+  .combo input { padding-right: 2.4em; }
+  .spin {
+    position: absolute; right: .8em; top: .8em; width: 1.1em; height: 1.1em;
+    border: 2px solid var(--rule); border-top-color: var(--fire); border-radius: 50%;
+    animation: spin .7s linear infinite; display: none;
+  }
+  .combo.busy .spin { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .list {
+    position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + 4px);
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 10px;
+    box-shadow: 0 14px 34px rgba(0,0,0,.45); max-height: 40vh; overflow-y: auto;
+    margin: 0; padding: 4px; list-style: none;
+  }
+  .list[hidden] { display: none; }
+  .opt { padding: .5em .7em; border-radius: 8px; cursor: pointer; display: grid; gap: 1px; }
+  .opt[aria-selected="true"], .opt:hover { background: var(--fire-wash); }
+  .opt b { font-weight: 600; }
+  .opt .sub { font-size: .85em; color: var(--muted); }
+  .status { padding: .7em; font-size: .9em; color: var(--muted); }
+  details { border-top: 1px solid var(--rule); padding-top: .8em; }
+  summary { cursor: pointer; font-size: .9em; font-weight: 500; color: var(--muted); }
+  details .row { margin-top: .8em; }
+  .actions { display: flex; gap: .8em; align-items: center; flex-wrap: wrap; }
+  .btn {
+    border-radius: 8px; padding: .65em 1.4em; min-height: 2.8em; cursor: pointer;
+    border: 1px solid var(--fire); background: var(--fire); color: var(--on-fire); font-weight: 600;
+  }
+  .btn.ghost { background: transparent; color: var(--ink); border-color: var(--rule); font-weight: 500; }
+  .error { padding: .7em .9em; border-radius: 8px; border: 1px solid var(--danger); color: var(--danger); }
+  .error[hidden] { display: none; }
+
+  /* ---------- dial ---------- */
+  .stage { display: grid; grid-template-columns: auto 1fr; gap: calc(var(--u) * 7); align-items: center; }
+  .dial { width: calc(var(--u) * 37); height: calc(var(--u) * 37); display: block; }
+  .dial text { font-family: var(--sans); fill: var(--muted); }
+  .dial .centre-name { font: 600 21px var(--serif); fill: var(--ink); }
+  .dial .centre-day { font: 500 13px var(--sans); fill: var(--fire-text); }
+  .dial .sector { fill: none; }
+  .dial .sector.on { fill: var(--fire-wash); }
+  .dial .divider, .dial .ring { stroke: var(--rule); stroke-width: 1; }
+  .dial .ring { fill: none; }
+  .dial .fire { stroke: var(--fire); stroke-width: 3.5; stroke-linecap: round; filter: drop-shadow(0 0 4px var(--fire)); }
+  .dial .travel { stroke: var(--fire); stroke-width: 5; fill: none; stroke-linecap: round; opacity: .6; }
+  .dial .sun { fill: var(--ink); stroke: var(--fire); stroke-width: 3; }
+
+  dl.facts { margin: 0; display: grid; gap: calc(var(--u) * 1.6); }
+  dl.facts dt { font-size: calc(var(--u) * 1.7); color: var(--muted); }
+  dl.facts dd { margin: 0; font: 500 calc(var(--u) * 2.7) / 1.25 var(--serif); }
+
+  /* ---------- day bar ---------- */
+  .daybar-wrap { position: relative; margin-top: calc(var(--u) * 6); }
+  .daybar { display: flex; height: calc(var(--u) * 11); border-radius: calc(var(--u) * 1); overflow: hidden; border: 1px solid var(--rule); }
+  .seg { display: grid; place-items: end center; text-align: center; padding: 0 calc(var(--u) * .6) calc(var(--u) * 1.2);
+         font-size: calc(var(--u) * 1.8); line-height: 1.25; opacity: .5; }
+  .seg.a { background: var(--seg-a); } .seg.b { background: var(--seg-b); } .seg.c { background: var(--seg-c); }
+  .seg.on { opacity: 1; font-weight: 600; }
+  .marker { position: absolute; top: calc(var(--u) * -1.4); height: calc(var(--u) * 6.4); width: calc(var(--u) * .45);
+            background: var(--fire); border-radius: 4px; transform: translateX(-50%); box-shadow: 0 0 calc(var(--u) * 1.6) var(--fire); }
+  .marker::after { content: ""; position: absolute; left: 50%; bottom: calc(var(--u) * -.5); width: calc(var(--u) * 1.5); height: calc(var(--u) * 1.5);
+                   border-radius: 50%; background: var(--fire); transform: translateX(-50%); }
+  .marker .lbl { position: absolute; bottom: calc(100% + var(--u) * .8); left: 50%; transform: translateX(-50%);
+                 font: 600 calc(var(--u) * 2.5) / 1.1 var(--serif); color: var(--fire-text); white-space: nowrap; }
+  .marker.l .lbl { transform: translateX(-12%); }
+  .marker.r .lbl { transform: translateX(-88%); }
+  .ticks { position: relative; height: calc(var(--u) * 6); margin-top: calc(var(--u) * 1.4); color: var(--muted); font-size: calc(var(--u) * 1.7); }
+  .tick { position: absolute; top: 0; transform: translateX(-50%); text-align: center; line-height: 1.3; white-space: nowrap; }
+  .tick.l { transform: none; text-align: left; } .tick.r { transform: translateX(-100%); text-align: right; }
+  .tick b { display: block; color: var(--ink); font-weight: 500; }
+
+  /* ---------- rule cards ---------- */
+  .rules { display: grid; grid-template-columns: repeat(3, 1fr); gap: calc(var(--u) * 2); }
+  .rule { border: 2px solid var(--rule); border-radius: calc(var(--u) * 1.4); padding: calc(var(--u) * 2.6); opacity: .6; }
+  .rule.on { opacity: 1; border-color: var(--fire); background: var(--fire-wash); }
+  .rule h3 { font-size: calc(var(--u) * 2.9); font-weight: 600; line-height: 1.15; margin-bottom: calc(var(--u) * 1); }
+  .rule p { margin: 0; font-size: calc(var(--u) * 2); color: var(--muted); }
+  .rule.on p { color: var(--ink); }
+
+  /* ---------- day count ---------- */
+  .days { display: grid; grid-template-columns: repeat(11, 1fr); gap: calc(var(--u) * 1); }
+  .cell { border: 1px solid var(--rule); border-radius: calc(var(--u) * .9); height: calc(var(--u) * 6.8);
+          display: grid; place-content: center; text-align: center; line-height: 1.1; }
+  .cell b { font: 600 calc(var(--u) * 2.8) / 1 var(--serif); }
+  .cell small { font-size: calc(var(--u) * 1.3); color: var(--muted); }
+  .cell.first { border-color: var(--fire); background: var(--fire-wash); }
+  .cell.last { background: var(--fire); border-color: var(--fire); color: var(--on-fire); }
+  .cell.last small { color: var(--on-fire); }
+
+  /* ---------- graha ---------- */
+  .chain { font: 500 calc(var(--u) * 7.5) / 1.1 var(--serif); }
+  .chain .op { color: var(--muted); }
+  .chain b { color: var(--fire-text); font-weight: 600; }
+  .tiles { display: grid; grid-template-columns: repeat(9, 1fr); gap: calc(var(--u) * 1.2); }
+  .tile { border: 1px solid var(--rule); border-radius: calc(var(--u) * 1.2); padding: calc(var(--u) * 1.6) calc(var(--u) * .6);
+          text-align: center; opacity: .62; }
+  .tile b { display: block; font: 600 calc(var(--u) * 4.6) / 1.1 var(--serif); }
+  .tile span { font-size: calc(var(--u) * 1.9); }
+  .tile.on { opacity: 1; background: var(--fire); border-color: var(--fire); color: var(--on-fire); }
+
+  /* ---------- exact ---------- */
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: calc(var(--u) * 3); }
+  .panel { background: var(--surface); border: 1px solid var(--rule); border-radius: calc(var(--u) * 1.4); padding: calc(var(--u) * 2.6); display: grid; gap: calc(var(--u) * 1); align-content: start; }
+  .panel h3 { font-size: calc(var(--u) * 2.4); font-weight: 600; color: var(--muted); }
+  .panel .big { font: 600 calc(var(--u) * 5.2) / 1.1 var(--serif); }
+  .panel .line { display: flex; justify-content: space-between; align-items: baseline; gap: 1em; border-top: 1px solid var(--rule); padding-top: calc(var(--u) * 1.2); font-size: calc(var(--u) * 2.2); color: var(--muted); }
+  .panel .line b { font: 600 calc(var(--u) * 4.2) / 1.1 var(--serif); color: var(--fire-text); white-space: nowrap; }
+  .panel .line:first-of-type { border-top: 0; padding-top: 0; }
+  .panel .small { font-size: calc(var(--u) * 1.9); color: var(--muted); margin: 0; }
+  .panel.match { border-color: var(--fire); }
+  .note { font-size: calc(var(--u) * 1.9); max-width: 50em; margin: 0; }
+  .note.warn { color: var(--fire-text); }
+
+  /* ---------- summary ---------- */
+  .facts2 { display: grid; grid-template-columns: repeat(2, 1fr); column-gap: calc(var(--u) * 5); }
+  .facts2 > div { border-top: 1px solid var(--rule); padding: calc(var(--u) * 1.2) 0; }
+  .facts2 dt { font-size: calc(var(--u) * 1.6); color: var(--muted); }
+  .facts2 dd { margin: 0; font-size: calc(var(--u) * 2.3); font-weight: 500; }
+  dl.facts2 { margin: 0; }
+  .share { font-size: calc(var(--u) * 1.7); color: var(--muted); white-space: pre-wrap; margin: 0; font-family: var(--sans); }
+
+  /* ---------- animated count (ruler) ---------- */
+  #s8 { gap: calc(var(--u) * 1.6); }
+  .readout { display: flex; align-items: baseline; gap: calc(var(--u) * 2.4); flex-wrap: wrap; }
+  .readout .day { font: 600 calc(var(--u) * 5.4) / 1 var(--serif); color: var(--fire-text); min-width: 4.6em; }
+  .readout .when, .readout .sun { font-size: calc(var(--u) * 1.9); color: var(--ink); }
+  .readout .sun { color: var(--muted); }
+  .ruler { width: 100%; height: auto; display: block; }
+  .ruler text { font-family: var(--sans); fill: var(--muted); }
+  .ruler .dcell { fill: transparent; stroke: var(--rule); stroke-width: 1; }
+  .ruler .dcell.past { fill: var(--fire-wash); }
+  .ruler .dcell.cur { fill: var(--fire); stroke: var(--fire); }
+  .ruler .dcell.after { opacity: .35; }
+  .ruler .dcell.birthday { stroke: var(--fire); stroke-width: 2.5; }
+  .ruler .cn { font-family: var(--serif); font-weight: 600; fill: var(--ink); }
+  .ruler .cn.cur, .ruler .cd.cur { fill: var(--on-fire); }
+  .ruler .cd { font-size: 13px; }
+  .ruler .ex { fill: transparent; stroke: var(--rule); }
+  .ruler .ex.cur { fill: var(--seg-c); }
+  .ruler .en { font-size: 14px; }
+  .ruler .en.cur { fill: var(--ink); }
+  .ruler .hr { font-size: 12px; }
+  .ruler .tk { stroke: var(--muted); stroke-width: 1; }
+  .ruler .rl { font-size: 15px; }
+  .ruler .fireline { stroke: var(--fire); stroke-width: 3.5; stroke-linecap: round; filter: drop-shadow(0 0 4px var(--fire)); }
+  .ruler .firetxt { font: 600 20px var(--serif); fill: var(--fire-text); }
+  .ruler .nextline { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .ruler .birthline { stroke: var(--ink); stroke-width: 2.5; }
+  .ruler .birthtxt { font: 600 18px var(--serif); fill: var(--ink); }
+  .ruler .sunline { stroke: var(--fire); stroke-width: 1.5; }
+  .ruler .sundot { fill: var(--ink); stroke: var(--fire); stroke-width: 3; }
+  .rctl { display: flex; gap: calc(var(--u) * 1); align-items: center; flex-wrap: wrap; }
+  .rctl .sep { width: 1px; align-self: stretch; background: var(--rule); margin: 0 calc(var(--u) * .5); }
+  .zl { color: var(--muted); font-size: calc(var(--u) * 1.7); }
+  .rbtn { font-size: max(15px, calc(var(--u) * 1.7)); padding: .5em 1.1em; min-height: 2.6em; border-radius: 8px; cursor: pointer;
+          background: transparent; color: var(--ink); border: 1px solid var(--rule); }
+  .rbtn:hover { background: var(--surface); }
+  .rbtn.primary { background: var(--fire); border-color: var(--fire); color: var(--on-fire); font-weight: 600; }
+  .rbtn[aria-pressed="true"] { border-color: var(--fire); background: var(--fire-wash); }
+
+  /* ---------- zoom tool ---------- */
+  .slide { transition: transform .12s ease-out; }
+  body.zoomed, body.zoomed.idle { cursor: zoom-out; }
+
+  /* ---------- controls ---------- */
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: flex; justify-content: space-between; align-items: center;
+         gap: 12px; padding: 10px 16px; font-size: max(14px, calc(var(--u) * 1.4)); color: var(--muted); transition: opacity .3s;
+         background: linear-gradient(to top, var(--bg) 40%, transparent); }
+  body.idle .bar { opacity: 0; }
+  body.idle { cursor: none; }
+  .dots { display: flex; gap: 8px; align-items: center; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; padding: 0; border: 1px solid var(--muted); background: transparent; cursor: pointer; }
+  .dot[aria-current="true"] { background: var(--fire); border-color: var(--fire); transform: scale(1.25); }
+  .ctl { display: flex; gap: 8px; align-items: center; }
+  .ctl button { background: transparent; color: var(--ink); border: 1px solid var(--rule); border-radius: 8px; padding: 6px 12px; min-height: 36px; cursor: pointer; }
+  .ctl button:hover { background: var(--surface); }
+  .kbd { display: none; }
+  @media (min-width: 900px) { .kbd { display: inline; } }
+
+  @media (max-width: 700px) {
+    .stage { grid-template-columns: 1fr; justify-items: center; }
+    .rules, .pair, .facts2 { grid-template-columns: 1fr; }
+    .slide { overflow: auto; justify-content: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<main class="deck" id="deck">
+
+  <!-- 0. Setup -->
+  <section class="slide active" id="s0" aria-label="Setup">
+    <div>
+      <h1>Saṅkrānti day number</h1>
+      <p class="lead">Enter the birth details, then press Start. Press F for full screen.</p>
+    </div>
+    <div class="setup">
+      <form id="form" autocomplete="off" novalidate>
+        <div class="row">
+          <div class="field"><label for="name">Name (optional)</label>
+            <input id="name" type="text" value="Example chart"></div>
+          <div class="field"><label for="date">Date of birth</label>
+            <input id="date" type="date" value="1963-08-07" required></div>
+          <div class="field"><label for="time">Time of birth (local)</label>
+            <input id="time" type="time" step="1" value="21:14:30" required></div>
+        </div>
+        <div class="field">
+          <label for="place">Place of birth</label>
+          <div class="combo" id="combo">
+            <input id="place" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false"
+                   aria-controls="placeList" aria-haspopup="listbox"
+                   placeholder="Start typing a town or city…" value="Sambalpur, Odisha, India">
+            <span class="spin" aria-hidden="true"></span>
+            <ul class="list" id="placeList" role="listbox" hidden></ul>
+          </div>
+          <div class="hint" id="placeHint">Suggestions appear as you type. Picking one fills in the coordinates and timezone.</div>
+        </div>
+        <details id="adv">
+          <summary>Coordinates and timezone</summary>
+          <div class="row">
+            <div class="field"><label for="lat">Latitude (°N)</label>
+              <input id="lat" type="number" step="any" min="-90" max="90" value="21.45"></div>
+            <div class="field"><label for="lon">Longitude (°E)</label>
+              <input id="lon" type="number" step="any" min="-180" max="180" value="83.966667"></div>
+            <div class="field"><label for="tz">Timezone (name or UTC offset)</label>
+              <input id="tz" type="text" list="tzList" value="Asia/Kolkata" placeholder="Asia/Kolkata or +5:30">
+              <datalist id="tzList"></datalist>
+              <div class="hint" id="tzHint"></div></div>
+          </div>
+        </details>
+        <div id="error" class="error" role="alert" hidden></div>
+        <div class="actions">
+          <button class="btn" type="submit">Start</button>
+          <button class="btn ghost" type="button" id="fsBtn0">Full screen</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- 1. Sun at birth -->
+  <section class="slide" id="s1" aria-label="The Sun at birth">
+    <h2 class="title" id="s1t"></h2>
+    <div class="stage">
+      <svg id="dial" class="dial" viewBox="0 0 260 260" role="img" aria-label="Zodiac dial showing the saṅkrānti and the Sun at birth"></svg>
+      <dl class="facts" id="s1f"></dl>
+    </div>
+  </section>
+
+  <!-- 2. Saṅkrānti moment -->
+  <section class="slide" id="s2" aria-label="The saṅkrānti moment">
+    <h2 class="title" id="s2t"></h2>
+    <p class="lead" id="s2l"></p>
+    <div id="s2b"></div>
+  </section>
+
+  <!-- 3. Which day is Day 1 -->
+  <section class="slide" id="s3" aria-label="Which date is Day 1">
+    <h2 class="title" id="s3t"></h2>
+    <div class="rules" id="s3r"></div>
+    <p class="lead" id="s3l"></p>
+  </section>
+
+  <!-- 3b. Animated count -->
+  <section class="slide" id="s8" aria-label="Watch the count">
+    <h2 class="title" id="s8t"></h2>
+    <div class="readout" aria-live="off">
+      <div class="day num" id="rdDay"></div>
+      <div class="when num" id="rdWhen"></div>
+      <div class="sun num" id="rdSun"></div>
+    </div>
+    <svg id="ruler" class="ruler" viewBox="0 0 1000 214" role="img" aria-label="Timeline of calendar days and exact 24-hour days from the saṅkrānti to the birth"></svg>
+    <div class="rctl">
+      <button type="button" class="rbtn primary" id="playBtn">Play</button>
+      <button type="button" class="rbtn" id="stepBtn">Step one day</button>
+      <span class="sep"></span><span class="zl">Zoom to</span>
+      <button type="button" class="rbtn" data-view="whole" aria-pressed="true">Whole sign (1)</button>
+      <button type="button" class="rbtn" data-view="day1" aria-pressed="false">Day 1 (2)</button>
+      <button type="button" class="rbtn" data-view="birth" aria-pressed="false">Birth day (3)</button>
+    </div>
+  </section>
+
+  <!-- 4. Count the days -->
+  <section class="slide" id="s4" aria-label="Counting the days">
+    <h2 class="title" id="s4t"></h2>
+    <div class="days" id="s4d"></div>
+    <p class="lead" id="s4l"></p>
+  </section>
+
+  <!-- 5. Graha -->
+  <section class="slide" id="s5" aria-label="The graha">
+    <h2 class="title" id="s5t"></h2>
+    <div class="chain" id="s5c"></div>
+    <div class="tiles" id="s5g"></div>
+  </section>
+
+  <!-- 6. Exact -->
+  <section class="slide" id="s6" aria-label="Exact measurement">
+    <h2 class="title" id="s6t"></h2>
+    <div class="pair" id="s6p"></div>
+    <p class="note" id="s6n"></p>
+  </section>
+
+  <!-- 7. Summary -->
+  <section class="slide" id="s7" aria-label="Summary">
+    <h2 class="title" id="s7t"></h2>
+    <dl class="facts2" id="s7f"></dl>
+    <pre class="share" id="s7s"></pre>
+  </section>
+</main>
+
+<nav class="bar" aria-label="Slide controls">
+  <div class="dots" id="dots"></div>
+  <div class="ctl">
+    <span id="counter" aria-live="polite"></span>
+    <button type="button" id="prevBtn" aria-label="Previous slide">Back</button>
+    <button type="button" id="nextBtn" aria-label="Next slide">Next</button>
+    <button type="button" id="editBtn">Edit birth details<span class="kbd"> (E)</span></button>
+    <button type="button" id="themeBtn">Theme<span class="kbd"> (T)</span></button>
+    <button type="button" id="zoomBtn" aria-pressed="false">Zoom<span class="kbd"> (Z)</span></button>
+    <button type="button" id="fsBtn">Full screen<span class="kbd"> (F)</span></button>
+  </div>
+</nav>
+
+<script>
+'use strict';
+/* =====================================================================
+   Constants
+   ===================================================================== */
+const MASA = ['Mesha','Vṛṣabha','Mithuna','Karka','Siṃha','Kanyā','Tulā','Vṛścika','Dhanu','Makara','Kumbha','Mīna'];
+const GRAHA = [null,
+  'Sun (Sūrya)', 'Moon (Candra)', 'Jupiter (Guru)', 'Rahu', 'Mercury (Budha)',
+  'Venus (Śukra)', 'Ketu', 'Saturn (Śani)', 'Mars (Maṅgala)'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MON3 = MONTHS.map(m => m.slice(0, 3));
+const DAY_MS = 86400000;
+
+/* Offline fallback, used only when both live search services fail */
+const OFFLINE_PLACES = [
+  ['Sambalpur','Odisha',21.4669,83.9812],['Bhubaneswar','Odisha',20.2961,85.8245],['Cuttack','Odisha',20.4625,85.883],
+  ['Puri','Odisha',19.8135,85.8312],['Berhampur','Odisha',19.3149,84.7941],
+  ['Tirupati','Andhra Pradesh',13.6288,79.4192],['Hyderabad','Telangana',17.385,78.4867],['Visakhapatnam','Andhra Pradesh',17.6868,83.2185],
+  ['Vijayawada','Andhra Pradesh',16.5062,80.648],['Guntur','Andhra Pradesh',16.3067,80.4365],['Nellore','Andhra Pradesh',14.4426,79.9865],
+  ['Kurnool','Andhra Pradesh',15.8281,78.0373],['Rajahmundry','Andhra Pradesh',17.0005,81.804],['Warangal','Telangana',17.9689,79.5941],
+  ['Chennai','Tamil Nadu',13.0827,80.2707],['Madurai','Tamil Nadu',9.9252,78.1198],['Coimbatore','Tamil Nadu',11.0168,76.9558],
+  ['Bengaluru','Karnataka',12.9716,77.5946],['Mysuru','Karnataka',12.2958,76.6394],
+  ['Thiruvananthapuram','Kerala',8.5241,76.9366],['Kochi','Kerala',9.9312,76.2673],
+  ['Mumbai','Maharashtra',19.076,72.8777],['Pune','Maharashtra',18.5204,73.8567],['Nagpur','Maharashtra',21.1458,79.0882],
+  ['Delhi','Delhi',28.6139,77.209],['Kolkata','West Bengal',22.5726,88.3639],['Ahmedabad','Gujarat',23.0225,72.5714],
+  ['Jaipur','Rajasthan',26.9124,75.7873],['Lucknow','Uttar Pradesh',26.8467,80.9462],['Varanasi','Uttar Pradesh',25.3176,82.9739],
+  ['Patna','Bihar',25.5941,85.1376],['Bhopal','Madhya Pradesh',23.2599,77.4126],['Indore','Madhya Pradesh',22.7196,75.8577],
+  ['Guwahati','Assam',26.1445,91.7362],['Chandigarh','Chandigarh',30.7333,76.7794]
+].map(([name, admin1, latitude, longitude]) => ({ name, admin1, country: 'India', latitude, longitude, timezone: 'Asia/Kolkata', src: 'offline' }));
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = (n, w = 2) => String(n).padStart(w, '0');
+const mod = (a, n) => ((a % n) + n) % n;
+const wrap180 = x => mod(x + 180, 360) - 180;
+
+/* =====================================================================
+   Ayanāṁśa (Lahiri, "true"): mean value + nutation in longitude.
+   The mean part is the precession model from the source file, with its J2000
+   constant calibrated to JHora (23°50′10″): JHora's saṅkrānti times for
+   1957–1979 are reproduced to within a few seconds.
+   ===================================================================== */
+const LAHIRI_J2000 = 23.836111;
+function ayanamsaAt(ms) {
+  const T = (ms - Date.UTC(2000, 0, 1, 12)) / DAY_MS / 36525;
+  const mean = LAHIRI_J2000 + T * (5029.0966 / 3600);
+  let nut = 0;
+  if (typeof Astronomy.e_tilt === 'function') {
+    nut = Astronomy.e_tilt(new Astronomy.AstroTime(new Date(ms))).dpsi / 3600;   // arcseconds → degrees
+  }
+  return mean + nut;
+}
+
+/* Sidereal longitude of the Sun (degrees) from Astronomy Engine */
+function siderealSun(date) {
+  return mod(Astronomy.SunPosition(date).elon - ayanamsaAt(date.getTime()), 360);
+}
+
+/* Find the moment the sidereal Sun reaches sign*30°, searching inside [fromMs, toMs] */
+function findSankranti(sign, fromMs, toMs) {
+  const target = sign * 30;
+  const f = t => wrap180(siderealSun(t.date) - target);
+  const hit = Astronomy.Search(f, new Astronomy.AstroTime(new Date(fromMs)),
+                                  new Astronomy.AstroTime(new Date(toMs)),
+                                  { dt_tolerance_seconds: 0.01 });
+  if (!hit) throw new Error('Could not locate the saṅkrānti for ' + MASA[sign] + '.');
+  return hit.date.getTime();
+}
+
+/* =====================================================================
+   Timezones (IANA name via Intl, or a fixed UTC offset)
+   ===================================================================== */
+function parseTz(text) {
+  const s = String(text || '').trim();
+  if (!s) return null;
+  const bare = s.replace(/^(UTC|GMT)\s*/i, '');
+  if (/^[+-]?\d+(\.\d+)?$/.test(bare)) {
+    const h = parseFloat(bare);
+    return Math.abs(h) <= 18 ? { kind: 'fixed', hours: h, label: 'UTC' + fmtOffset(h * 3600000) } : null;
+  }
+  const m = bare.match(/^([+-]?)(\d{1,2}):(\d{2})$/);
+  if (m) {
+    const h = (m[1] === '-' ? -1 : 1) * (parseInt(m[2], 10) + parseInt(m[3], 10) / 60);
+    return Math.abs(h) <= 18 ? { kind: 'fixed', hours: h, label: 'UTC' + fmtOffset(h * 3600000) } : null;
+  }
+  try { new Intl.DateTimeFormat('en-US', { timeZone: s }); return { kind: 'iana', id: s, label: s }; }
+  catch (e) { return null; }
+}
+
+const dtfCache = {};
+function offsetMsAt(tz, utcMs) {
+  if (tz.kind === 'fixed') return Math.round(tz.hours * 3600000);
+  const dtf = dtfCache[tz.id] || (dtfCache[tz.id] = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz.id, hourCycle: 'h23',
+    year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric'
+  }));
+  const whole = Math.floor(utcMs / 1000) * 1000;
+  const p = {};
+  dtf.formatToParts(new Date(whole)).forEach(x => { p[x.type] = x.value; });
+  const asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second);
+  return asUtc - whole;
+}
+
+function fmtOffset(ms) {
+  const sign = ms < 0 ? '-' : '+';
+  const a = Math.abs(Math.round(ms / 1000));
+  const h = Math.floor(a / 3600), m = Math.floor((a % 3600) / 60), s = a % 60;
+  return sign + h + ':' + pad(m) + (s ? ':' + pad(s) : '');
+}
+
+function localToUtc(tz, y, mo, d, h, mi, s) {
+  const naive = Date.UTC(y, mo - 1, d, h, mi, s);
+  let u = naive - offsetMsAt(tz, naive);
+  u = naive - offsetMsAt(tz, u);
+  return u;
+}
+
+function localParts(tz, utcMs) {
+  const t = new Date(utcMs + offsetMsAt(tz, utcMs));
+  return { y: t.getUTCFullYear(), mo: t.getUTCMonth() + 1, d: t.getUTCDate(),
+           h: t.getUTCHours(), mi: t.getUTCMinutes(), s: t.getUTCSeconds() };
+}
+
+/* Round to the nearest second before formatting, so 19:37:20.6 shows as 19:37:21 */
+function clock(tz, utcMs) {
+  const p = localParts(tz, Math.round(utcMs / 1000) * 1000);
+  return pad(p.h) + ':' + pad(p.mi) + ':' + pad(p.s);
+}
+const longDate = p => MONTHS[p.mo - 1] + ' ' + p.d + ', ' + p.y;
+const shortDate = p => p.d + ' ' + MON3[p.mo - 1] + ' ' + p.y;
+
+/* =====================================================================
+   The calculation
+   ===================================================================== */
+function sunriseSunset(tz, lat, lon, p) {
+  const startMs = localToUtc(tz, p.y, p.mo, p.d, 0, 0, 0);
+  const obs = new Astronomy.Observer(lat, lon, 0);
+  const t0 = new Astronomy.AstroTime(new Date(startMs));
+  /* Sun's centre on the geometric horizon (altitude 0°), the convention JHora uses */
+  const rise = Astronomy.SearchAltitude(Astronomy.Body.Sun, obs, +1, t0, 1, 0);
+  const set  = Astronomy.SearchAltitude(Astronomy.Body.Sun, obs, -1, t0, 1, 0);
+  return { rise: rise ? rise.date.getTime() : null, set: set ? set.date.getTime() : null };
+}
+
+function digitChain(n) {
+  const steps = [];
+  while (n > 9) {
+    const ds = String(n).split('').map(Number);
+    const sum = ds.reduce((a, b) => a + b, 0);
+    steps.push({ expr: ds.join('+'), sum });
+    n = sum;
+  }
+  return { steps, digit: n };
+}
+
+function compute(inp) {
+  const { y, mo, d, h, mi, s, lat, lon, tz } = inp;
+  const birthMs = localToUtc(tz, y, mo, d, h, mi, s);
+  const birth = new Date(birthMs);
+
+  const sid = siderealSun(birth);
+  const sign = Math.floor(sid / 30);
+
+  const prevMs = findSankranti(sign, birthMs - 35 * DAY_MS, birthMs + 60000);
+  const nextMs = findSankranti((sign + 1) % 12, birthMs - 60000, birthMs + 35 * DAY_MS);
+
+  const sanLocal = localParts(tz, Math.round(prevMs / 1000) * 1000);
+  const sr = sunriseSunset(tz, lat, lon, sanLocal);
+
+  let phase = 'unknown';
+  if (sr.rise !== null && sr.set !== null) {
+    if (prevMs > sr.set) phase = 'evening';
+    else if (prevMs < sr.rise) phase = 'predawn';
+    else phase = 'day';
+  }
+
+  /* Day 1 is the calendar date of the saṅkrānti on the local clock:
+     daytime → that day; after sunset but before midnight → same day (midnight order);
+     after midnight → the new date. */
+  const day1 = Date.UTC(sanLocal.y, sanLocal.mo - 1, sanLocal.d);
+  const bornDay = Date.UTC(y, mo - 1, d);
+  const dayNo = Math.round((bornDay - day1) / DAY_MS) + 1;
+
+  const chain = digitChain(dayNo);
+
+  /* Exact measurement: whole seconds between the saṅkrānti and the birth moment.
+     The class rule counts calendar dates; the exact count moves on 24 h after the saṅkrānti. */
+  const elapsedSec = Math.round((birthMs - prevMs) / 1000);
+  const exactDay = Math.floor(elapsedSec / 86400) + 1;
+  const nextLocal = localParts(tz, Math.round(nextMs / 1000) * 1000);
+  const masaDays = (nextMs - prevMs) / DAY_MS;
+
+  return {
+    inp, birthMs, sid, sign, prevMs, nextMs, sanLocal, nextLocal, sr, phase,
+    dayNo, chain, masaDays, elapsedSec, exactDay, ayanamsa: ayanamsaAt(birthMs),
+    masa: MASA[sign], vedicDob: dayNo + '/' + pad(sign + 1),
+    graha: GRAHA[chain.digit]
+  };
+}
+
+
+/* =====================================================================
+   Helpers for presenting
+   ===================================================================== */
+const fmtDur = sec => {
+  const d = Math.floor(sec / 86400), h = Math.floor(sec % 86400 / 3600), m = Math.floor(sec % 3600 / 60), x = sec % 60;
+  return d + ' days ' + h + ' h ' + m + ' m ' + x + ' s';
+};
+const fmtSpan = sec => {
+  const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), x = sec % 60;
+  return (h ? h + ' h ' : '') + m + ' m ' + x + ' s';
+};
+const ordinal = n => n + (['th','st','nd','rd'][(n % 100 - 20) % 10] || ['th','st','nd','rd'][n % 100] || 'th');
+const dms = deg => {
+  const d = Math.floor(deg), m = Math.floor((deg - d) * 60), s = Math.round(((deg - d) * 60 - m) * 60);
+  return d + '°' + pad(m) + '′' + pad(s % 60) + '″';
+};
+const GRAHA_SHORT = [null, 'Sun', 'Moon', 'Jupiter', 'Rahu', 'Mercury', 'Venus', 'Ketu', 'Saturn', 'Mars'];
+
+function todSec(tz, ms) {
+  const p = localParts(tz, Math.round(ms / 1000) * 1000);
+  return p.h * 3600 + p.mi * 60 + p.s;
+}
+
+function phaseInfo(r) {
+  const tz = r.inp.tz;
+  const ss = r.sr.set !== null ? clock(tz, r.sr.set) : '';
+  const sr = r.sr.rise !== null ? clock(tz, r.sr.rise) : '';
+  switch (r.phase) {
+    case 'day':     return { idx: 1, short: 'in the daytime, between sunrise (' + sr + ') and sunset (' + ss + ')', text: 'Daytime, so that day is Day 1.' };
+    case 'evening': return { idx: 2, short: 'after sunset (' + ss + ') but before midnight', text: 'After sunset but before midnight: the Kali Yuga midnight order keeps it on the same day.' };
+    case 'predawn': return { idx: 0, short: 'after midnight but before sunrise (' + sr + ')', text: 'After midnight: the date has already changed, so Day 1 is that new date.' };
+    default:        return { idx: -1, short: 'on a day with no sunrise or sunset at this latitude', text: 'No sunrise or sunset that day here, so the calendar date of the saṅkrānti is used.' };
+  }
+}
+
+/* =====================================================================
+   Drawing
+   ===================================================================== */
+function drawDial(r) {
+  const cx = 130, cy = 130, R = 112, rIn = 70, rMid = 91;
+  const pt = (deg, rad) => { const a = (deg - 90) * Math.PI / 180; return [cx + rad * Math.cos(a), cy + rad * Math.sin(a)]; };
+  const f = n => n.toFixed(2);
+  const sector = (a0, a1) => {
+    const [x0, y0] = pt(a0, R), [x1, y1] = pt(a1, R), [x2, y2] = pt(a1, rIn), [x3, y3] = pt(a0, rIn);
+    return `M${f(x0)} ${f(y0)}A${R} ${R} 0 0 1 ${f(x1)} ${f(y1)}L${f(x2)} ${f(y2)}A${rIn} ${rIn} 0 0 0 ${f(x3)} ${f(y3)}Z`;
+  };
+  let svg = '';
+  for (let i = 0; i < 12; i++) svg += `<path class="sector${i === r.sign ? ' on' : ''}" d="${sector(i * 30, i * 30 + 30)}"/>`;
+  svg += `<circle class="ring" cx="${cx}" cy="${cy}" r="${R}"/><circle class="ring" cx="${cx}" cy="${cy}" r="${rIn}"/>`;
+  for (let i = 0; i < 12; i++) {
+    const [x1, y1] = pt(i * 30, rIn), [x2, y2] = pt(i * 30, R);
+    svg += `<line class="divider" x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}"/>`;
+    const [tx, ty] = pt(i * 30 + 15, rMid);
+    svg += `<text x="${f(tx)}" y="${f(ty)}" font-size="12" text-anchor="middle" dominant-baseline="central">${i + 1}</text>`;
+  }
+  const [fx1, fy1] = pt(r.sign * 30, rIn - 8), [fx2, fy2] = pt(r.sign * 30, R + 9);
+  svg += `<line class="fire" x1="${f(fx1)}" y1="${f(fy1)}" x2="${f(fx2)}" y2="${f(fy2)}"/>`;
+  const within = mod(r.sid, 30);
+  const [ax, ay] = pt(r.sign * 30, rMid + 15), [bx, by] = pt(r.sid, rMid + 15);
+  svg += `<path class="travel" d="M${f(ax)} ${f(ay)}A${rMid + 15} ${rMid + 15} 0 ${within > 180 ? 1 : 0} 1 ${f(bx)} ${f(by)}"/>`;
+  const [sx, sy] = pt(r.sid, rMid + 15);
+  svg += `<circle class="sun" cx="${f(sx)}" cy="${f(sy)}" r="6"/>`;
+  svg += `<text class="centre-name" x="${cx}" y="${cy - 4}" text-anchor="middle">${esc(r.masa)}</text>`;
+  svg += `<text class="centre-day" x="${cx}" y="${cy + 16}" text-anchor="middle">Day ${r.dayNo}</text>`;
+  $('dial').innerHTML = svg;
+}
+
+function dayBar(r) {
+  const tz = r.inp.tz, ph = phaseInfo(r);
+  if (r.sr.rise === null || r.sr.set === null) {
+    return '<p class="note warn">There is no sunrise or sunset on this date at this latitude, so the calendar date of the saṅkrānti is used.</p>';
+  }
+  const pc = s => (s / 864).toFixed(3);         // seconds of day → percent
+  const rise = todSec(tz, r.sr.rise), set = todSec(tz, r.sr.set), san = todSec(tz, r.prevMs);
+  const cls = san < 6 * 864 * 1 ? 'l' : san > 94 * 864 ? 'r' : '';
+  const segs = [
+    ['a', 'After midnight', 0, rise], ['b', 'Daytime', rise, set], ['c', 'After sunset, before midnight', set, 86400]
+  ].map(([c, t, from, to], i) =>
+    `<div class="seg ${c}${ph.idx === i ? ' on' : ''}" style="width:${pc(to - from)}%">${t}</div>`).join('');
+  return `<div class="daybar-wrap">
+    <div class="daybar">${segs}</div>
+    <div class="marker ${cls}" style="left:${pc(san)}%"><span class="lbl">Saṅkrānti ${clock(tz, r.prevMs)}</span></div>
+    <div class="ticks">
+      <span class="tick l" style="left:0"><b>00:00</b>midnight</span>
+      <span class="tick" style="left:${pc(rise)}%"><b>${clock(tz, r.sr.rise)}</b>sunrise</span>
+      <span class="tick" style="left:${pc(set)}%"><b>${clock(tz, r.sr.set)}</b>sunset</span>
+      <span class="tick r" style="left:100%"><b>24:00</b>midnight</span>
+    </div></div>`;
+}
+
+/* =====================================================================
+   Render all slides from one result
+   ===================================================================== */
+let R = null;
+
+function render(r) {
+  R = r;
+  const tz = r.inp.tz, san = r.sanLocal;
+  const bp = { y: r.inp.y, mo: r.inp.mo, d: r.inp.d };
+  const ph = phaseInfo(r);
+  const placeName = $('place').value.trim() || (r.inp.lat.toFixed(2) + '°, ' + r.inp.lon.toFixed(2) + '°');
+
+  /* 1 */
+  drawDial(r);
+  $('s1t').textContent = 'At birth the Sun was in ' + r.masa;
+  const rows = [
+    ['Position in the sign', dms(mod(r.sid, 30))],
+    ['Sidereal longitude', dms(r.sid)],
+    ['Born', shortDate(bp) + ', ' + pad(r.inp.h) + ':' + pad(r.inp.mi) + ':' + pad(r.inp.s) + (r.inp.name ? ', ' + r.inp.name : '')],
+    ['Place', placeName],
+    ['Ayanāṁśa (Lahiri)', dms(r.ayanamsa)]
+  ];
+  $('s1f').innerHTML = rows.map(([k, v]) => '<div><dt>' + esc(k) + '</dt><dd class="num">' + esc(v) + '</dd></div>').join('');
+
+  /* 2 */
+  $('s2t').innerHTML = 'The Sun entered ' + esc(r.masa) + ' at <span class="fire num">' + clock(tz, r.prevMs) + '</span> on ' + esc(longDate(san));
+  $('s2l').textContent = 'That moment is the saṅkrānti. It fell ' + ph.short + '.';
+  $('s2b').innerHTML = dayBar(r);
+
+  /* 3 */
+  $('s3t').innerHTML = 'Day 1 of ' + esc(r.masa) + ' Māsa is <span class="fire">' + esc(longDate(san)) + '</span>';
+  const rules = [
+    ['After midnight', 'The date has already changed. Day 1 is that new date.'],
+    ['Between sunrise and sunset', 'That day is Day 1.'],
+    ['After sunset, before midnight', 'Kali Yuga midnight order: still the same day.']
+  ];
+  $('s3r').innerHTML = rules.map(([h, p], i) => `<div class="rule${ph.idx === i ? ' on' : ''}"><h3>${h}</h3><p>${p}</p></div>`).join('');
+  $('s3l').textContent = 'In this chart the saṅkrānti fell ' + ph.short + '.';
+
+  /* 4 */
+  $('s4t').innerHTML = 'Born on ' + esc(shortDate(bp)) + ': <span class="fire">day ' + r.dayNo + '</span> of ' + esc(r.masa) + ' Māsa';
+  const day1 = Date.UTC(san.y, san.mo - 1, san.d);
+  let cells = '';
+  for (let i = 0; i < r.dayNo; i++) {
+    const t = new Date(day1 + i * DAY_MS);
+    cells += `<div class="cell${i === 0 ? ' first' : ''}${i === r.dayNo - 1 ? ' last' : ''}"><b>${i + 1}</b><small>${t.getUTCDate()} ${MON3[t.getUTCMonth()]}</small></div>`;
+  }
+  $('s4d').innerHTML = cells;
+  const rowsNeeded = Math.ceil(r.dayNo / 11);
+  $('s4d').style.gridTemplateColumns = 'repeat(' + Math.ceil(r.dayNo / rowsNeeded) + ', 1fr)';
+  $('s4l').textContent = r.dayNo === 1
+    ? 'Born on Day 1 itself.'
+    : 'Counting ' + shortDate(san) + ' as Day 1, ' + (r.dayNo - 1) + ' full day' + (r.dayNo - 1 === 1 ? '' : 's') + ' had passed and the ' + ordinal(r.dayNo) + ' was under way.';
+
+  /* 5 */
+  const digit = r.chain.digit;
+  if (r.chain.steps.length) {
+    $('s5t').innerHTML = 'Day ' + r.dayNo + ' reduces to <span class="fire">' + digit + '</span>, which is ' + esc(GRAHA_SHORT[digit]);
+    $('s5c').innerHTML = r.dayNo + r.chain.steps.map((s, i) =>
+      ' <span class="op">→</span> ' + s.expr.split('+').join(' <span class="op">+</span> ') + ' <span class="op">=</span> ' + (i === r.chain.steps.length - 1 ? '<b>' + s.sum + '</b>' : s.sum)).join('');
+  } else {
+    $('s5t').innerHTML = 'Day ' + r.dayNo + ' is already one digit: <span class="fire">' + esc(GRAHA_SHORT[digit]) + '</span>';
+    $('s5c').innerHTML = 'Day <b>' + r.dayNo + '</b>';
+  }
+  $('s5g').innerHTML = [1,2,3,4,5,6,7,8,9].map(n => `<div class="tile${n === digit ? ' on' : ''}"><b>${n}</b><span>${GRAHA_SHORT[n]}</span></div>`).join('');
+
+  /* 6 */
+  const days = r.elapsedSec / 86400;
+  const sanTod = todSec(tz, r.prevMs);
+  const same = r.exactDay === r.dayNo;
+  $('s6t').textContent = 'From saṅkrānti to birth, measured exactly';
+  $('s6p').innerHTML = `
+    <div class="panel"><h3>Exact time</h3>
+      <div class="big num">${days.toFixed(3)} days</div>
+      <p class="small num">${fmtDur(r.elapsedSec)}. The Sun travelled ${dms(mod(r.sid, 30))}, about ${(mod(r.sid, 30) / days).toFixed(2)}° a day.</p></div>
+    <div class="panel${same ? ' match' : ''}"><h3>Two ways to count</h3>
+      <div class="line"><span>Calendar count</span><b>Day ${r.dayNo}</b></div>
+      <div class="line"><span>Exact count</span><b>Day ${r.exactDay}</b></div></div>`;
+  const toMid = Math.min(sanTod, 86400 - sanTod);
+  const side = sanTod < 43200 ? 'after' : 'before';
+  let n = same ? 'The calendar count (the class rule) and the exact count agree here. ' :
+    'The class rule counts calendar dates, so it moves on at midnight. The exact count moves on 24 hours after the saṅkrānti (' + clock(tz, r.prevMs) + '); this birth is earlier in the day than that, so the exact count is one lower. ';
+  n += 'The saṅkrānti fell ' + fmtSpan(toMid) + ' ' + side + ' midnight';
+  n += toMid < 900 ? ', which is close: another ayanāṁśa or Sūrya Siddhānta tables could move it to the other date.'
+                   : ', a safe margin against ephemeris differences of a few minutes.';
+  const nEl = $('s6n'); nEl.textContent = n; nEl.className = 'note' + (toMid < 900 ? ' warn' : '');
+
+  /* 7 */
+  $('s7t').innerHTML = 'Day ' + r.dayNo + ' of ' + esc(r.masa) + ', so <span class="fire">' + digit + ' ' + esc(GRAHA_SHORT[digit]) + '</span>';
+  const nx = r.nextLocal;
+  const facts = [
+    ['Vedic date of birth', r.vedicDob + ' (day / Saura month number)'],
+    ['Saṅkrānti (start)', longDate(san) + ', ' + clock(tz, r.prevMs)],
+    ['Next saṅkrānti', MASA[(r.sign + 1) % 12] + ': ' + longDate(nx) + ', ' + clock(tz, r.nextMs)],
+    ['Length of the māsa', r.masaDays.toFixed(2) + ' days']
+  ];
+  $('s7f').innerHTML = facts.map(([k, v]) => '<div><dt>' + esc(k) + '</dt><dd class="num">' + esc(v) + '</dd></div>').join('');
+  prepRuler(r);
+  $('s7s').textContent =
+    'Sankranti of ' + r.masa + ' Masa occurred at ' + clock(tz, r.prevMs) + ' on ' + longDate(san) + ', which is ' + ph.short + '.\n' +
+    'Therefore, Sankranti date is taken as ' + longDate(san) + ' as Day-01 of ' + r.masa + ' Masa.\n' +
+    (r.inp.name ? r.inp.name + ' was born on ' : 'Born on ') + shortDate(bp) + ' which is Day-' + pad(r.dayNo) + ' of ' + r.masa + ' Masa. ' +
+    (r.chain.steps.length ? r.chain.steps.map(s => s.expr + ' = ' + s.sum).join(', ') + '. ' : '') + 'Day number ' + digit + ' = ' + r.graha + '.';
+}
+
+/* =====================================================================
+   Form
+   ===================================================================== */
+function showError(msg) { const e = $('error'); e.textContent = msg; e.hidden = false; }
+function clearError() { $('error').hidden = true; }
+
+function readInputs() {
+  const date = $('date').value, time = $('time').value;
+  if (!date || !time) throw new Error('Enter the date and time of birth.');
+  const lat = parseFloat($('lat').value), lon = parseFloat($('lon').value);
+  if (isNaN(lat) || isNaN(lon)) throw new Error('Pick a place from the suggestions, or enter latitude and longitude under “Coordinates and timezone”.');
+  if (Math.abs(lat) > 90 || Math.abs(lon) > 180) throw new Error('Latitude must be within ±90 and longitude within ±180.');
+  const tz = parseTz($('tz').value);
+  if (!tz) throw new Error('The timezone is not recognised. Use a name like Asia/Kolkata or an offset like +5:30.');
+  const [y, mo, d] = date.split('-').map(Number);
+  const [h, mi, s] = time.split(':').map(Number);
+  return { name: $('name').value.trim(), y, mo, d, h, mi, s: s || 0, lat, lon, tz };
+}
+
+function calculate() {
+  clearError();
+  if (typeof Astronomy === 'undefined') { showError('The Astronomy Engine library did not load. Check your internet connection and reload.'); return false; }
+  try { render(compute(readInputs())); return true; }
+  catch (err) { showError(err.message || String(err)); console.error(err); return false; }
+}
+
+$('form').addEventListener('submit', e => { e.preventDefault(); if (calculate()) goTo(1); });
+function onPlaceChosen() { calculate(); }   // refresh slides after a place is picked
+
+/* timezone suggestions */
+try {
+  if (Intl.supportedValuesOf) {
+    $('tzList').innerHTML = Intl.supportedValuesOf('timeZone').map(z => '<option value="' + z + '">').join('');
+  }
+} catch (e) { /* datalist is optional */ }
+
+/* =====================================================================
+   Live place search
+   Open-Meteo geocoding (GeoNames): returns the IANA timezone with every hit.
+   Photon (OpenStreetMap): strong as-you-type matching for partial names.
+   Both are queried in parallel; results are merged and de-duplicated.
+   ===================================================================== */
+const combo = $('combo'), placeInput = $('place'), list = $('placeList');
+let items = [], active = -1, ctl = null, timer = null, searchSeq = 0;
+
+async function getJson(url, signal) {
+  const to = new AbortController();
+  const kill = setTimeout(() => to.abort(), 7000);
+  signal.addEventListener('abort', () => to.abort(), { once: true });
+  try {
+    const res = await fetch(url, { signal: to.signal });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.json();
+  } finally { clearTimeout(kill); }
+}
+
+async function searchOpenMeteo(q, signal) {
+  const j = await getJson('https://geocoding-api.open-meteo.com/v1/search?count=8&language=en&format=json&name=' + encodeURIComponent(q), signal);
+  return (j.results || []).map(r => ({
+    name: r.name, admin1: r.admin1 || '', country: r.country || '',
+    latitude: r.latitude, longitude: r.longitude, timezone: r.timezone || '', src: 'om', cc: r.country_code || ''
+  }));
+}
+
+async function searchPhoton(q, signal) {
+  const j = await getJson('https://photon.komoot.io/api/?limit=10&lang=en&q=' + encodeURIComponent(q), signal);
+  return (j.features || [])
+    .filter(f => f.properties && (f.properties.osm_key === 'place' || f.properties.osm_key === 'boundary') && f.properties.name)
+    .map(f => ({
+      name: f.properties.name, admin1: f.properties.state || f.properties.county || '', country: f.properties.country || '',
+      latitude: f.geometry.coordinates[1], longitude: f.geometry.coordinates[0], timezone: '', src: 'photon',
+      cc: (f.properties.countrycode || '')
+    }));
+}
+
+function mergeResults(a, b) {
+  const out = [];
+  const near = (x, y) => Math.abs(x.latitude - y.latitude) < 0.25 && Math.abs(x.longitude - y.longitude) < 0.25;
+  [...a, ...b].forEach(r => {
+    if (!out.some(o => o.name.toLowerCase() === r.name.toLowerCase() && near(o, r))) out.push(r);
+  });
+  return out.slice(0, 8);
+}
+
+function offlineMatches(q) {
+  const s = q.toLowerCase();
+  return OFFLINE_PLACES.filter(p => p.name.toLowerCase().startsWith(s) || p.name.toLowerCase().includes(s)).slice(0, 6);
+}
+
+function closeList() {
+  list.hidden = true; placeInput.setAttribute('aria-expanded', 'false'); placeInput.removeAttribute('aria-activedescendant'); active = -1;
+}
+
+function label(p) { return [p.name, p.admin1, p.country].filter((v, i, a) => v && a.indexOf(v) === i).join(', '); }
+
+function renderList(status) {
+  let html = '';
+  items.forEach((p, i) => {
+    const sub = [p.admin1, p.country].filter((v, i2, a) => v && a.indexOf(v) === i2).join(', ');
+    html += '<li class="opt" role="option" id="opt' + i + '" data-i="' + i + '" aria-selected="' + (i === active) + '">' +
+            '<b>' + esc(p.name) + '</b><span class="sub">' + esc(sub) + ' · ' + p.latitude.toFixed(2) + '°, ' + p.longitude.toFixed(2) + '°</span></li>';
+  });
+  if (status) html += '<li class="status" role="presentation">' + esc(status) + '</li>';
+  list.innerHTML = html;
+  list.hidden = !html;
+  placeInput.setAttribute('aria-expanded', String(!list.hidden));
+}
+
+async function runSearch(q) {
+  if (ctl) ctl.abort();
+  ctl = new AbortController();
+  const mine = ++searchSeq, signal = ctl.signal;
+  combo.classList.add('busy');
+  const [om, ph] = await Promise.allSettled([searchOpenMeteo(q, signal), searchPhoton(q, signal)]);
+  if (mine !== searchSeq) return;             // a newer search has started
+  combo.classList.remove('busy');
+
+  const a = om.status === 'fulfilled' ? om.value : [];
+  const b = ph.status === 'fulfilled' ? ph.value : [];
+  let status = '';
+  items = mergeResults(a, b);
+  if (om.status === 'rejected' && ph.status === 'rejected') {
+    if (signal.aborted) return;
+    items = offlineMatches(q);
+    status = items.length ? 'Live search unavailable. Showing a short built-in list of Indian towns.'
+                          : 'Live search unavailable. Enter latitude and longitude under “Coordinates and timezone”.';
+  } else if (!items.length) {
+    status = 'No matches. Try a different spelling, or add the state or country.';
+  }
+  active = items.length ? 0 : -1;
+  renderList(status);
+  if (active >= 0) placeInput.setAttribute('aria-activedescendant', 'opt0');
+}
+
+/* Best-effort timezone for a Photon hit (no timezone in its data) */
+async function resolveTimezone(p) {
+  if (p.timezone) return { id: p.timezone, estimated: false };
+  try {
+    const c = new AbortController();
+    const j = await getJson('https://api.open-meteo.com/v1/forecast?current=temperature_2m&timezone=auto&latitude=' + p.latitude + '&longitude=' + p.longitude, c.signal);
+    if (j && j.timezone) return { id: j.timezone, estimated: false };
+  } catch (e) { /* fall through */ }
+  if ((p.cc || '').toUpperCase() === 'IN' || p.country === 'India') return { id: 'Asia/Kolkata', estimated: false };
+  return { id: String(Math.round(p.longitude / 15 * 2) / 2), estimated: true };
+}
+
+async function choose(i) {
+  const p = items[i];
+  if (!p) return;
+  closeList();
+  placeInput.value = label(p);
+  $('lat').value = +p.latitude.toFixed(5);
+  $('lon').value = +p.longitude.toFixed(5);
+  $('placeHint').textContent = p.latitude.toFixed(4) + '°N, ' + p.longitude.toFixed(4) + '°E';
+  $('tzHint').textContent = 'Finding timezone…'; $('tzHint').className = 'hint';
+  const tz = await resolveTimezone(p);
+  $('tz').value = tz.id;
+  if (tz.estimated) {
+    $('tzHint').textContent = 'Estimated from longitude. Check it under Coordinates and timezone.';
+    $('tzHint').className = 'hint warn';
+    $('adv').open = true;
+  } else {
+    $('tzHint').textContent = 'Historical offsets for this timezone are applied to the birth date.';
+    $('tzHint').className = 'hint';
+  }
+  onPlaceChosen();
+}
+
+placeInput.addEventListener('input', () => {
+  clearTimeout(timer);
+  const q = placeInput.value.trim();
+  if (q.length < 2) { if (ctl) ctl.abort(); searchSeq++; combo.classList.remove('busy'); items = []; closeList(); return; }
+  timer = setTimeout(() => runSearch(q), 250);
+});
+
+placeInput.addEventListener('keydown', e => {
+  if (list.hidden || !items.length) return;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    active = mod(active + (e.key === 'ArrowDown' ? 1 : -1), items.length);
+    renderList();
+    placeInput.setAttribute('aria-activedescendant', 'opt' + active);
+    const el = $('opt' + active); if (el) el.scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter') {
+    if (active >= 0) { e.preventDefault(); choose(active); }
+  } else if (e.key === 'Escape') { closeList(); }
+});
+
+list.addEventListener('mousedown', e => {           // mousedown fires before the input loses focus
+  const li = e.target.closest('.opt');
+  if (li) { e.preventDefault(); choose(+li.dataset.i); }
+});
+placeInput.addEventListener('blur', () => setTimeout(closeList, 120));
+placeInput.addEventListener('focus', () => { if (items.length) renderList(); });
+
+/* Manual edits to coordinates make the old timezone suggestion stale */
+['lat', 'lon'].forEach(id => $(id).addEventListener('input', () => {
+  $('tzHint').textContent = 'Coordinates edited. Confirm the timezone below.'; $('tzHint').className = 'hint warn';
+}));
+
+
+/* =====================================================================
+   Animated count: calendar days vs exact 24 h days, on a time ruler
+   ===================================================================== */
+const RW = { W: 1000, H: 214, x0: 116, x1: 992, calY: 66, calH: 58, exY: 160, exH: 28 };
+const REDUCED = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const RULER_SLIDE = 4;
+let RU = null;                                   // data for the current result
+const RV = { t: 0, cur: { a: 0, b: 1 }, mode: 'whole', playing: false, raf: 0, viewRaf: 0 };
+
+function prepRuler(r) {
+  const tz = r.inp.tz, san = r.sanLocal, B = [];
+  for (let k = 0; k < 45; k++) {                 // local midnights: B[k-1]..B[k] is calendar Day k
+    const ms = localToUtc(tz, san.y, san.mo, san.d + k, 0, 0, 0);
+    B.push(ms);
+    if (ms > r.nextMs + DAY_MS) break;
+  }
+  RU = {
+    r, tz, B, san,
+    T: ms => (ms - r.prevMs) / DAY_MS,
+    birthT: (r.birthMs - r.prevMs) / DAY_MS,
+    nextT: (r.nextMs - r.prevMs) / DAY_MS,
+    dayAt(ms) { let k = 1; while (k < B.length - 1 && ms >= B[k]) k++; return k; }
+  };
+  stopPlay();
+  RV.t = RU.birthT;
+  RV.mode = 'whole';
+  RV.cur = viewFor('whole');
+  $('s8t').textContent = r.dayNo === 1 ? 'Born on Day 1' : 'Counting from Day 1 to Day ' + r.dayNo;
+  syncViewButtons();
+  drawRuler(); updateReadout();
+}
+
+function viewFor(mode) {
+  const { B, T, r } = RU;
+  if (mode === 'day1')  return { a: T(B[0]) - 0.08, b: T(B[1]) + 0.08 };
+  if (mode === 'birth') return { a: T(B[r.dayNo - 1]) - 0.08, b: T(B[r.dayNo]) + 0.08 };
+  return { a: T(B[0]) - 0.35, b: RU.nextT + 0.6 };
+}
+
+function syncViewButtons() {
+  document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === RV.mode)));
+  $('playBtn').textContent = RV.playing ? 'Pause' : (RV.t >= RU.birthT - 1e-6 ? 'Replay' : 'Play');
+}
+
+function setView(mode, instant) {
+  if (!RU) return;
+  RV.mode = mode; syncViewButtons();
+  cancelAnimationFrame(RV.viewRaf);
+  const to = viewFor(mode);
+  if (instant || REDUCED) { RV.cur = to; drawRuler(); return; }
+  const from = RV.cur, t0 = performance.now(), dur = 800;
+  const c0 = (from.a + from.b) / 2, c1 = (to.a + to.b) / 2, w0 = Math.log(from.b - from.a), w1 = Math.log(to.b - to.a);
+  const step = now => {
+    const p = Math.min(1, (now - t0) / dur);
+    const e = p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+    const c = c0 + (c1 - c0) * e, w = Math.exp(w0 + (w1 - w0) * e);   // zoom in log-space: even-feeling zoom
+    RV.cur = { a: c - w / 2, b: c + w / 2 };
+    drawRuler();
+    if (p < 1) RV.viewRaf = requestAnimationFrame(step);
+  };
+  RV.viewRaf = requestAnimationFrame(step);
+}
+
+function updateReadout() {
+  if (!RU) return;
+  const { r, tz } = RU, ms = r.prevMs + RV.t * DAY_MS;
+  const day = RU.dayAt(ms);
+  const p = localParts(tz, Math.round(ms / 1000) * 1000);
+  const deg = Math.max(0, mod(siderealSun(new Date(ms)) - r.sign * 30 + 180, 360) - 180);
+  $('rdDay').textContent = 'Day ' + day;
+  $('rdWhen').textContent = p.d + ' ' + MON3[p.mo - 1] + ' ' + p.y + ', ' + pad(p.h) + ':' + pad(p.mi) + ':' + pad(p.s);
+  $('rdSun').textContent = 'Sun ' + dms(deg) + ' into ' + r.masa;
+}
+
+function drawRuler() {
+  if (!RU) return;
+  const { r, tz, B, T, san } = RU, v = RV.cur;
+  const { W, H, x0, x1, calY, calH, exY, exH } = RW;
+  const ppd = (x1 - x0) / (v.b - v.a);                       // pixels per day
+  const X = t => x0 + (t - v.a) * ppd;
+  const nowMs = r.prevMs + RV.t * DAY_MS;
+  const curDay = RU.dayAt(nowMs), curEx = Math.floor(RV.t) + 1;
+  const f = n => n.toFixed(1);
+  let s = `<defs><clipPath id="rclip"><rect x="${x0}" y="0" width="${x1 - x0}" height="${H}"/></clipPath></defs>`;
+  s += `<text class="rl" x="${x0 - 12}" y="${calY + calH / 2 + 5}" text-anchor="end">Calendar</text>`;
+  s += `<text class="rl" x="${x0 - 12}" y="${exY + exH / 2 + 5}" text-anchor="end">Exact 24 h</text>`;
+  s += '<g clip-path="url(#rclip)">';
+
+  /* calendar days: local midnight to local midnight */
+  for (let k = 1; k < B.length; k++) {
+    const a = X(T(B[k - 1])), b = X(T(B[k]));
+    if (b < x0 - 2 || a > x1 + 2) continue;
+    const w = b - a, va = Math.max(a, x0), vb = Math.min(b, x1), vw = vb - va, vc = (va + vb) / 2;
+    const st = k === curDay ? ' cur' : (k < curDay ? ' past' : '');
+    s += `<rect class="dcell${st}${k === r.dayNo ? ' birthday' : ''}${k > r.dayNo ? ' after' : ''}" x="${f(a)}" y="${calY}" width="${f(w)}" height="${calH}" rx="3"/>`;
+    if (vw > 20) {
+      const fs = Math.min(26, vw * .55);
+      s += `<text class="cn${st === ' cur' ? ' cur' : ''}" x="${f(vc)}" y="${calY + (vw > 52 ? 32 : 36)}" font-size="${f(fs)}" text-anchor="middle">${k}</text>`;
+    }
+    if (vw > 52) {
+      const d = new Date(Date.UTC(san.y, san.mo - 1, san.d + k - 1));
+      s += `<text class="cd${st === ' cur' ? ' cur' : ''}" x="${f(vc)}" y="${calY + 50}" text-anchor="middle">${d.getUTCDate()} ${MON3[d.getUTCMonth()]}</text>`;
+    }
+    if (ppd > 200) {                                          // hour ticks once a day is wide enough
+      const stepH = ppd > 620 ? 3 : 6;
+      for (let h = 0; h < 24; h += stepH) {
+        const xx = X(T(B[k - 1] + h * 3600000));
+        s += `<line class="tk" x1="${f(xx)}" y1="${calY + calH}" x2="${f(xx)}" y2="${calY + calH + 7}"/>` +
+             `<text class="hr" x="${f(xx)}" y="${calY + calH + 23}" text-anchor="middle">${pad(h)}:00</text>`;
+      }
+    }
+  }
+
+  /* exact days: 24 h steps counted from the saṅkrānti */
+  for (let j = 1; j <= Math.ceil(RU.nextT) + 1; j++) {
+    const a = X(j - 1), b = X(j);
+    if (b < x0 - 2 || a > x1 + 2) continue;
+    const cur = j === curEx;
+    s += `<rect class="ex${cur ? ' cur' : ''}" x="${f(a)}" y="${exY}" width="${f(b - a)}" height="${exH}" rx="3"/>`;
+    const ea = Math.max(a, x0), eb = Math.min(b, x1);
+    if (eb - ea > 20) s += `<text class="en${cur ? ' cur' : ''}" x="${f((ea + eb) / 2)}" y="${exY + exH / 2 + 5}" text-anchor="middle">${j}</text>`;
+  }
+
+  /* saṅkrānti, next saṅkrānti, birth */
+  const xf = X(0), xn = X(RU.nextT), xb = X(RU.birthT), xs = X(RV.t);
+  const lineTop = 44, lineBot = exY + exH + 8;
+  if (xf >= x0 && xf <= x1) s += `<line class="fireline" x1="${f(xf)}" y1="${lineTop}" x2="${f(xf)}" y2="${lineBot}"/>`;
+  if (xn >= x0 && xn <= x1) s += `<line class="nextline" x1="${f(xn)}" y1="${lineTop}" x2="${f(xn)}" y2="${lineBot}"/>`;
+  if (xb >= x0 && xb <= x1) s += `<line class="birthline" x1="${f(xb)}" y1="${lineTop}" x2="${f(xb)}" y2="${lineBot}"/>`;
+  s += `<line class="sunline" x1="${f(xs)}" y1="${calY - 6}" x2="${f(xs)}" y2="${exY + exH}"/>`;
+  s += `<circle class="sundot" cx="${f(xs)}" cy="${calY - 10}" r="8"/>`;
+  s += '</g>';
+
+  /* labels sit outside the clip so they are never cut */
+  const lab = (x, txt, cls) => {
+    if (x < x0 - 4 || x > x1 + 4) return '';
+    const anchor = x < x0 + 90 ? 'start' : x > x1 - 90 ? 'end' : 'middle';
+    return `<text class="${cls}" x="${f(x)}" y="30" text-anchor="${anchor}">${txt}</text>`;
+  };
+  s += lab(xf, 'Saṅkrānti ' + clock(tz, r.prevMs), 'firetxt');
+  s += lab(xb, 'Birth ' + pad(r.inp.h) + ':' + pad(r.inp.mi) + ':' + pad(r.inp.s), 'birthtxt');
+  if (xn >= x0 && xn <= x1) s += `<text class="hr" x="${f(Math.min(xn, x1 - 4))}" y="30" text-anchor="${xn > x1 - 90 ? 'end' : 'middle'}">next saṅkrānti</text>`;
+  $('ruler').innerHTML = s;
+}
+
+function stopPlay() {
+  cancelAnimationFrame(RV.raf); RV.playing = false;
+  if (RU) syncViewButtons();
+}
+
+function tweenTo(target, dur, done) {
+  cancelAnimationFrame(RV.raf);
+  const from = RV.t, t0 = performance.now();
+  if (REDUCED || dur <= 0) { RV.t = target; drawRuler(); updateReadout(); if (done) done(); return; }
+  const step = now => {
+    const p = Math.min(1, (now - t0) / dur);
+    RV.t = from + (target - from) * p;
+    drawRuler(); updateReadout();
+    if (p < 1) RV.raf = requestAnimationFrame(step); else if (done) done();
+  };
+  RV.raf = requestAnimationFrame(step);
+}
+
+function play() {
+  if (!RU) return;
+  if (RV.playing) { stopPlay(); return; }
+  if (RV.t >= RU.birthT - 1e-6) RV.t = 0;
+  if (RV.mode !== 'whole') setView('whole');
+  RV.playing = true; syncViewButtons();
+  const remaining = (RU.birthT - RV.t) / RU.birthT;
+  const total = Math.min(9000, Math.max(3500, RU.r.dayNo * 300));
+  tweenTo(RU.birthT, total * remaining, () => { RV.playing = false; syncViewButtons(); });
+}
+
+function stepDay() {
+  if (!RU) return;
+  stopPlay();
+  const { B, T, r } = RU, ms = r.prevMs + RV.t * DAY_MS, cd = RU.dayAt(ms);
+  if (RV.t >= RU.birthT - 1e-6) { RV.t = 0; drawRuler(); updateReadout(); syncViewButtons(); return; }
+  const target = cd < r.dayNo ? Math.min(RU.birthT, T(B[cd]) + 0.03) : RU.birthT;
+  tweenTo(target, 380, syncViewButtons);
+}
+
+$('playBtn').addEventListener('click', play);
+$('stepBtn').addEventListener('click', stepDay);
+document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+
+/* =====================================================================
+   Zoom tool: press Z, then move the pointer to magnify; wheel changes the level
+   ===================================================================== */
+const zoom = { on: false, k: 2.4, x: innerWidth / 2, y: innerHeight * .45 };
+function paintZoom() {
+  const active = document.querySelector('.slide.active');
+  document.querySelectorAll('.slide').forEach(e => { if (e !== active) { e.style.transform = ''; e.style.transformOrigin = ''; } });
+  if (active) {
+    active.style.transformOrigin = zoom.on ? zoom.x + 'px ' + zoom.y + 'px' : '';
+    active.style.transform = zoom.on ? 'scale(' + zoom.k + ')' : '';
+  }
+  document.body.classList.toggle('zoomed', zoom.on);
+  $('zoomBtn').setAttribute('aria-pressed', String(zoom.on));
+}
+function setZoom(on, centre) {
+  zoom.on = on;
+  if (on && centre) { zoom.x = innerWidth / 2; zoom.y = innerHeight * .45; }
+  paintZoom();
+}
+$('zoomBtn').addEventListener('click', () => setZoom(!zoom.on, true));
+document.addEventListener('mousemove', e => { zoom.x = e.clientX; zoom.y = e.clientY; if (zoom.on) paintZoom(); });
+document.addEventListener('wheel', e => {
+  if (!zoom.on) return;
+  e.preventDefault();
+  zoom.k = Math.max(1.4, Math.min(6, zoom.k * (e.deltaY < 0 ? 1.12 : 1 / 1.12)));
+  paintZoom();
+}, { passive: false });
+$('deck').addEventListener('click', e => { if (zoom.on && !e.target.closest('button, input, summary, a')) setZoom(false); });
+
+/* =====================================================================
+   Deck navigation
+   ===================================================================== */
+const TOTAL = 9;
+let cur = 0, idleTimer = null;
+const dotsEl = $('dots');
+for (let i = 0; i < TOTAL; i++) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'dot';
+  b.setAttribute('aria-label', i === 0 ? 'Setup' : 'Slide ' + i);
+  b.addEventListener('click', () => goTo(i));
+  dotsEl.appendChild(b);
+}
+
+function goTo(i) {
+  i = Math.max(0, Math.min(TOTAL - 1, i));
+  if (i > 0 && !R) i = 0;
+  cur = i;
+  document.querySelectorAll('.slide').forEach((s, k) => s.classList.toggle('active', k === cur));
+  [...dotsEl.children].forEach((d, k) => d.setAttribute('aria-current', String(k === cur)));
+  $('counter').textContent = cur === 0 ? 'Setup' : cur + ' / ' + (TOTAL - 1);
+  $('prevBtn').disabled = cur === 0;
+  $('nextBtn').disabled = cur === TOTAL - 1;
+  try { history.replaceState(null, '', '#' + cur); } catch (e) { /* file:// in some browsers */ }
+  setZoom(false);
+  stopPlay();
+  if (cur === RULER_SLIDE && RU) { RV.t = 0; drawRuler(); updateReadout(); setTimeout(() => { if (cur === RULER_SLIDE && !RV.playing) play(); }, 500); }
+  wake();
+}
+const next = () => goTo(cur + 1), prev = () => goTo(cur - 1);
+$('nextBtn').addEventListener('click', next);
+$('prevBtn').addEventListener('click', prev);
+$('editBtn').addEventListener('click', () => goTo(0));
+
+function toggleFullscreen() {
+  const el = document.documentElement;
+  if (document.fullscreenElement) document.exitFullscreen();
+  else if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+}
+['fsBtn', 'fsBtn0'].forEach(id => $(id).addEventListener('click', toggleFullscreen));
+document.addEventListener('fullscreenchange', () => {
+  const on = !!document.fullscreenElement;
+  $('fsBtn').firstChild.textContent = on ? 'Exit full screen' : 'Full screen';
+  $('fsBtn0').textContent = on ? 'Exit full screen' : 'Full screen';
+});
+
+function toggleTheme() {
+  const root = document.documentElement;
+  root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+}
+$('themeBtn').addEventListener('click', toggleTheme);
+
+/* Controls fade after 2.5 s of stillness on presentation slides */
+function wake() {
+  document.body.classList.remove('idle');
+  clearTimeout(idleTimer);
+  if (cur > 0) idleTimer = setTimeout(() => document.body.classList.add('idle'), 2500);
+}
+['mousemove', 'mousedown', 'touchstart'].forEach(ev => document.addEventListener(ev, wake, { passive: true }));
+
+document.addEventListener('keydown', e => {
+  wake();
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const t = e.target, tag = t && t.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  const onButton = tag === 'BUTTON' || tag === 'SUMMARY';
+  switch (e.key) {
+    case 'ArrowRight': case 'PageDown': case 'ArrowDown': e.preventDefault(); next(); break;
+    case 'ArrowLeft': case 'PageUp': case 'ArrowUp': e.preventDefault(); prev(); break;
+    case ' ': if (!onButton) { e.preventDefault(); next(); } break;
+    case 'Home': e.preventDefault(); goTo(0); break;
+    case 'End': e.preventDefault(); goTo(TOTAL - 1); break;
+    case 'f': case 'F': toggleFullscreen(); break;
+    case 'e': case 'E': goTo(0); break;
+    case 't': case 'T': toggleTheme(); break;
+    case 'z': case 'Z': setZoom(!zoom.on); break;
+    case 'Escape': setZoom(false); break;
+    case 'p': case 'P': if (cur === RULER_SLIDE) play(); break;
+    case '1': if (cur === RULER_SLIDE) setView('whole'); break;
+    case '2': if (cur === RULER_SLIDE) setView('day1'); break;
+    case '3': if (cur === RULER_SLIDE) setView('birth'); break;
+  }
+});
+
+/* touch swipe */
+let sx = null;
+document.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive: true });
+document.addEventListener('touchend', e => {
+  if (sx === null || cur === 0) { sx = null; return; }
+  const dx = e.changedTouches[0].clientX - sx; sx = null;
+  if (Math.abs(dx) > 60) (dx < 0 ? next : prev)();
+}, { passive: true });
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (typeof Astronomy === 'undefined') { showError('The Astronomy Engine library did not load. Check your internet connection and reload.'); goTo(0); return; }
+  calculate();
+  const h = parseInt(location.hash.slice(1), 10);
+  goTo(isNaN(h) ? 0 : h);
+});
+</script>
+</body>
+</html>
